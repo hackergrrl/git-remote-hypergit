@@ -1,0 +1,31 @@
+{
+  "name": "git-remote-hypergit",
+  "description": "git remote helper for hypergit",
+  "author": "Stephen Whitmore <sww@eight.net>",
+  "version": "0.0.0",
+  "bin": {
+    "git-remote-hypergit": "git-remote-hypergit.js"
+  },
+  "repository": {
+    "url": "git://github.com/noffle/git-remote-hypergit.git"
+  },
+  "homepage": "https://github.com/noffle/git-remote-hypergit",
+  "bugs": "https://github.com/noffle/git-remote-hypergit/issues",
+  "main": "index.js",
+  "scripts": {
+    "test": "tape test/*.js",
+    "lint": "standard"
+  },
+  "keywords": [],
+  "dependencies": {
+    "hyperdb": "^3.1.2",
+    "pull-git-remote-helper": "^2.0.0",
+    "pull-stream": "^3.6.8",
+    "stream-to-pull-stream": "^1.7.2"
+  },
+  "devDependencies": {
+    "tape": "~4.6.2",
+    "standard": "~10.0.0"
+  },
+  "license": "ISC"
+}
