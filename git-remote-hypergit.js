@@ -10,6 +10,8 @@ var gitRemoteHelper = require('pull-git-remote-helper')
 var discovery = require('discovery-swarm')
 var swarmDefaults = require('dat-swarm-defaults')
 var debug = require('debug')('git-remote-hypergit')
+var envpaths = require('env-paths')('hypergit')
+var mkdirp = require('mkdirp')
 
 function swarmReplicate (db, cb) {
   var key = db.key.toString('hex')
@@ -36,16 +38,21 @@ function swarmReplicate (db, cb) {
       swarm.leave(key)
       swarm.destroy(cb)
     })
+    r.once('error', function () {})
   })
 }
 
 var key = process.argv[3].replace('hypergit://', '')
 
+var dbpath = path.join(envpaths.config, key)
+
 // Only consult the swarm on an initial 'git clone'
 var doSwarm = true
-if (fs.existsSync('.hypergit')) doSwarm = false
+if (fs.existsSync(dbpath)) doSwarm = false
 
-var db = hyperdb('.hypergit', key)
+mkdirp.sync(dbpath)
+
+var db = hyperdb(dbpath, key)
 db.ready(function () {
   if (doSwarm) swarmReplicate(db, done)
   else done()

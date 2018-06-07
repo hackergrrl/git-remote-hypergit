@@ -21,8 +21,10 @@
     "dat-swarm-defaults": "^1.0.1",
     "debug": "^3.1.0",
     "discovery-swarm": "^5.1.1",
+    "env-paths": "^1.0.0",
     "hyperdb": "^3.1.2",
     "hyperdb-git-repo": "^1.0.2",
+    "mkdirp": "^0.5.1",
     "pull-git-remote-helper": "^2.0.0",
     "pull-stream": "^3.6.8",
     "stream-to-pull-stream": "^1.7.2"
