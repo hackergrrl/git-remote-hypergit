@@ -16,7 +16,7 @@ var mkdirp = require('mkdirp')
 function swarmReplicate (db, cb) {
   var key = db.key.toString('hex')
   debug('id', db.local.key.toString('hex'))
-  debug('seeking peers for', key)
+  console.error('Seeking peers..')
   var swarm = discovery(swarmDefaults({
     id: db.local.key
   }))
@@ -24,19 +24,26 @@ function swarmReplicate (db, cb) {
   swarm.join(key)
   var seen = {}
   seen[db.local.key.toString('hex')] = true
+  var active = 0
+  var done = new Buffer(1)
   swarm.on('connection', function (conn, info) {
     if (seen[info.id.toString('hex')]) return
     seen[info.id.toString('hex')] = true
 
     debug('found peer', info.id.toString('hex'))
+    console.error('Replicating with peer..')
 
-    var r = db.replicate()
+    var r = db.replicate({live:false})
     r.pipe(conn).pipe(r)
+    active++
 
     r.once('end', function () {
       debug('done replicating', info.id.toString('hex'))
-      swarm.leave(key)
-      swarm.destroy(cb)
+      console.error('..done!')
+      if (!--active) {
+        swarm.leave(key)
+        swarm.destroy(cb)
+      }
     })
     r.once('error', function () {})
   })
