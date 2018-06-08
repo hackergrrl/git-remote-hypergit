@@ -2,7 +2,7 @@
   "name": "git-remote-hypergit",
   "description": "git remote helper for hypergit",
   "author": "Stephen Whitmore <sww@eight.net>",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "bin": {
     "git-remote-hypergit": "git-remote-hypergit.js"
   },
