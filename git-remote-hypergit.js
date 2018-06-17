@@ -62,7 +62,6 @@ function swarmReplicate (db, cb) {
     r.once('error', function (err) {
       debug('failed replicating', key)
       console.error('..failed! (' + err.message + ')')
-      console.error('', active, active.indexOf(key))
       if (active.indexOf(key) === -1) return
       active.splice(active.indexOf(key), 1)
       if (!active.length) {
