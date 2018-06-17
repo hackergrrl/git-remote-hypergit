@@ -69,9 +69,10 @@ function swarmReplicate (db, cb) {
       }
     })
   })
+  /*
+  // TODO: dont crash here on info.id === undefined
   swarm.on('connection-closed', function (conn, info) {
   console.log('info', info)
-    // TODO: dont crash here on info.id === undefined
     var key = info.id.toString('hex')
     debug('lost connection ', key)
     if (active.indexOf(key) === -1) return
@@ -82,6 +83,7 @@ function swarmReplicate (db, cb) {
       swarm.destroy(cb.bind(null, null, replicated))
     }
   })
+  */
 }
 
 var key = process.argv[3].replace('hypergit://', '')
