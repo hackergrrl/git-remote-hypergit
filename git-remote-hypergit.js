@@ -24,28 +24,55 @@ function swarmReplicate (db, cb) {
   swarm.join(key)
   var seen = {}
   seen[db.local.key.toString('hex')] = true
-  var active = 0
+  var active = []
   var done = new Buffer(1)
+  var replicated = 0
   swarm.on('connection', function (conn, info) {
-    if (seen[info.id.toString('hex')]) return
-    seen[info.id.toString('hex')] = true
+    if (seen[key]) return
+    seen[key] = true
+    var key = info.id.toString('hex')
 
-    debug('found peer', info.id.toString('hex'))
+    debug('found peer', key)
     console.error('Replicating with peer..')
 
     var r = db.replicate({live:false})
     r.pipe(conn).pipe(r)
-    active++
+    active.push(key)
 
     r.once('end', function () {
-      debug('done replicating', info.id.toString('hex'))
-      console.error('..done!')
-      if (!--active) {
+      debug('done replicating', key)
+      console.error('..done!', active, active.indexOf(key))
+      replicated++
+      if (active.indexOf(key) === -1) return
+      active.splice(active.indexOf(key), 1)
+      if (!active.length) {
         swarm.leave(key)
-        swarm.destroy(cb)
+        swarm.destroy(cb.bind(null, null, replicated))
       }
     })
-    r.once('error', function () {})
+    r.once('error', function (err) {
+      debug('failed replicating', key)
+      console.error('..failed! (' + err.message + ')')
+      console.error('', active, active.indexOf(key))
+      if (active.indexOf(key) === -1) return
+      active.splice(active.indexOf(key), 1)
+      if (!active.length) {
+        swarm.leave(key)
+        swarm.destroy(cb.bind(null, null, replicated))
+      }
+    })
+  })
+  swarm.on('connection-closed', function (conn, info) {
+  console.log('info', info)
+    var key = info.id.toString('hex')
+    debug('lost connection ', key)
+    if (active.indexOf(key) === -1) return
+    console.error('..failed! (lost connection)')
+    active.splice(active.indexOf(key), 1)
+    if (!active.length) {
+      swarm.leave(key)
+      swarm.destroy(cb.bind(null, null, replicated))
+    }
   })
 }
 
@@ -62,9 +89,14 @@ mkdirp.sync(dbpath)
 var db = hyperdb(dbpath, key)
 db.ready(function () {
   if (doSwarm) swarmReplicate(db, done)
-  else done()
+  else done(null, Infinity)
 
-  function done () {
+  function done (err, numReplicated) {
+    if (!numReplicated) {
+      console.error('Failed to find any peers for this repo.')
+      // TODO: delete wip local repo
+      process.exit(1)
+    }
     pull(
       toPull(process.stdin),
       gitRemoteHelper(Repo(db)),
