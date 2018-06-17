@@ -12,6 +12,8 @@ var swarmDefaults = require('dat-swarm-defaults')
 var debug = require('debug')('git-remote-hypergit')
 var envpaths = require('env-paths')('hypergit')
 var mkdirp = require('mkdirp')
+var tmpdir = require('os').tmpdir()
+var ncp = require('ncp')
 
 function swarmReplicate (db, cb) {
   var repoKey = db.key.toString('hex')
@@ -33,7 +35,7 @@ function swarmReplicate (db, cb) {
       swarm.leave(repoKey)
       swarm.destroy(cb.bind(null, null, replicated))
     }
-  }, 10000)
+  }, 15000)
   swarm.on('connection', function (conn, info) {
     if (seen[key]) return
     seen[key] = true
@@ -48,7 +50,7 @@ function swarmReplicate (db, cb) {
 
     r.once('end', function () {
       debug('done replicating', key)
-      console.error('..done!', active, active.indexOf(key))
+      console.error('..done!')
       replicated++
       if (active.indexOf(key) === -1) return
       active.splice(active.indexOf(key), 1)
@@ -89,14 +91,15 @@ function swarmReplicate (db, cb) {
 var key = process.argv[3].replace('hypergit://', '')
 
 var dbpath = path.join(envpaths.config, key)
+var tmpdbpath = path.join(tmpdir, key + '-' + String(Math.random()).substring(3))
 
 // Only consult the swarm on an initial 'git clone'
 var doSwarm = true
 if (fs.existsSync(dbpath)) doSwarm = false
 
-mkdirp.sync(dbpath)
+mkdirp.sync(tmpdbpath)
+var db = hyperdb(tmpdbpath, key)
 
-var db = hyperdb(dbpath, key)
 db.ready(function () {
   if (doSwarm) swarmReplicate(db, done)
   else done(null, Infinity)
@@ -104,13 +107,19 @@ db.ready(function () {
   function done (err, numReplicated) {
     if (!numReplicated) {
       console.error('Failed to find any peers for this repo.')
-      // TODO: delete wip local repo
-      process.exit(1)
+      return process.exit(1)
     }
-    pull(
-      toPull(process.stdin),
-      gitRemoteHelper(Repo(db)),
-      toPull(process.stdout)
-    )
+
+    // make real repo + copy
+    mkdirp.sync(dbpath)
+    ncp(tmpdbpath, dbpath, function (err) {
+      if (err) throw err
+      var realdb = hyperdb(dbpath, key)
+      pull(
+        toPull(process.stdin),
+        gitRemoteHelper(Repo(realdb)),
+        toPull(process.stdout)
+      )
+    })
   }
 })
