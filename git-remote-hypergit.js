@@ -14,19 +14,26 @@ var envpaths = require('env-paths')('hypergit')
 var mkdirp = require('mkdirp')
 
 function swarmReplicate (db, cb) {
-  var key = db.key.toString('hex')
-  debug('id', db.local.key.toString('hex'))
+  var repoKey = db.key.toString('hex')
+  debug('id', repoKey)
   console.error('Seeking peers..')
   var swarm = discovery(swarmDefaults({
     id: db.local.key
   }))
   swarm.listen(2341)  // TODO: pick free port
-  swarm.join(key)
+  swarm.join(repoKey)
   var seen = {}
   seen[db.local.key.toString('hex')] = true
   var active = []
   var done = new Buffer(1)
   var replicated = 0
+  setTimeout(function () {
+    if (!active.length && !replicated) {
+      console.error('timeout (no peers available for this repo)')
+      swarm.leave(repoKey)
+      swarm.destroy(cb.bind(null, null, replicated))
+    }
+  }, 10000)
   swarm.on('connection', function (conn, info) {
     if (seen[key]) return
     seen[key] = true
@@ -46,7 +53,7 @@ function swarmReplicate (db, cb) {
       if (active.indexOf(key) === -1) return
       active.splice(active.indexOf(key), 1)
       if (!active.length) {
-        swarm.leave(key)
+        swarm.leave(repoKey)
         swarm.destroy(cb.bind(null, null, replicated))
       }
     })
@@ -57,20 +64,21 @@ function swarmReplicate (db, cb) {
       if (active.indexOf(key) === -1) return
       active.splice(active.indexOf(key), 1)
       if (!active.length) {
-        swarm.leave(key)
+        swarm.leave(repoKey)
         swarm.destroy(cb.bind(null, null, replicated))
       }
     })
   })
   swarm.on('connection-closed', function (conn, info) {
   console.log('info', info)
+    // TODO: dont crash here on info.id === undefined
     var key = info.id.toString('hex')
     debug('lost connection ', key)
     if (active.indexOf(key) === -1) return
     console.error('..failed! (lost connection)')
     active.splice(active.indexOf(key), 1)
     if (!active.length) {
-      swarm.leave(key)
+      swarm.leave(repoKey)
       swarm.destroy(cb.bind(null, null, replicated))
     }
   })
